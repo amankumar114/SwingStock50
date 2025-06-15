@@ -30,9 +30,10 @@ RSI_NEUTRAL = 50
 SUPPORT_THRESHOLD = 3.0  # % distance to consider near support
 MIN_WEEKS_DATA = 100  # Minimum weeks of data required (approx 2 years)
 
-EMAIL_SENDER = 'amankumarism@gmail.com'
-EMAIL_PASSWORD = 'acpx atfi idvt ruad'
-EMAIL_RECEIVER = 'amankumarism@gmail.com'
+# === CONFIG ===
+EMAIL_SENDER = os.environ.get('EMAIL_SENDER')
+EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
+EMAIL_RECEIVER = os.environ.get('EMAIL_RECEIVER')
 
 # Setup logging
 logging.basicConfig(
