@@ -3,7 +3,7 @@ name: Daily Stock Analysis
 on:
   schedule:
     - cron: '15 4 * * *'  # 9:45 AM IST (4:15 AM UTC)
-  workflow_dispatch:  # Allow manual runs
+  workflow_dispatch:
 
 jobs:
   analysis:
@@ -14,21 +14,21 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Install TA-Lib dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential wget
+        wget https://github.com/ta-lib/ta-lib/releases/download/v0.4.0/ta-lib-0.4.0-src.tar.gz
+        tar -xzf ta-lib-0.4.0-src.tar.gz
+        cd ta-lib
+        ./configure --prefix=/usr
+        make
+        sudo make install
+
     - name: Set up Python 3.10
       uses: actions/setup-python@v5
       with:
         python-version: '3.10'
-
-    - name: Install TA-Lib dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential
-        wget https://github.com/ta-lib/ta-lib/archive/refs/tags/v0.4.0.tar.gz -O ta-lib.tar.gz
-        tar -xzf ta-lib.tar.gz
-        cd ta-lib-*
-        ./configure --prefix=/usr
-        make
-        sudo make install
 
     - name: Install Python dependencies
       run: pip install -r requirements.txt
@@ -38,4 +38,4 @@ jobs:
         EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
-      run: python nifty_swing_trades.py
+      run: python niftybees_strategy.py  # Updated script name
