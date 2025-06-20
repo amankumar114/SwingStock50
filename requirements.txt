@@ -1,5 +1,5 @@
 yfinance
 pandas
 numpy
-ta  # if using the TA alternative
+ta
 python-dotenv
