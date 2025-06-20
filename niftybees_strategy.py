@@ -8,7 +8,12 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import logging
 import numpy as np
-import talib
+from ta.trend import EMAIndicator, MACD
+from ta.momentum import RSIIndicator
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # === CONFIG ===
 NIFTY50_TICKERS = [
@@ -30,10 +35,10 @@ RSI_NEUTRAL = 50
 SUPPORT_THRESHOLD = 3.0  # % distance to consider near support
 MIN_WEEKS_DATA = 100  # Minimum weeks of data required (approx 2 years)
 
-# === CONFIG ===
-EMAIL_SENDER = os.environ.get('EMAIL_SENDER')
-EMAIL_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-EMAIL_RECEIVER = os.environ.get('EMAIL_RECEIVER')
+# Email configuration from environment variables
+EMAIL_SENDER = os.getenv('EMAIL_SENDER', 'amankumarism@gmail.com')
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
+EMAIL_RECEIVERS = os.getenv('EMAIL_RECEIVERS', 'amankumarism@gmail.com,muskanrohada432@gmail.com').split(',')
 
 # Setup logging
 logging.basicConfig(
@@ -61,23 +66,13 @@ def fetch_weekly_data(ticker):
         return pd.DataFrame()
 
 def calculate_technical_indicators(df):
-    """Calculate technical indicators with robust data handling"""
+    """Calculate technical indicators using ta library"""
     try:
         if df.empty or len(df) < 200:  # Ensure sufficient data
             return None
             
-        # Create clean price array with NaN handling
-        close_prices = df['Close'].values
-        if close_prices.ndim != 1:
-            close_prices = close_prices.flatten()
-            
-        # Filter out NaN and infinite values
-        valid_mask = ~np.isnan(close_prices) & ~np.isinf(close_prices)
-        close_prices = close_prices[valid_mask]
+        close_prices = df['Close']
         
-        if len(close_prices) < 200:
-            return None
-            
         # Calculate EMAs
         ema_values = {}
         for period in SUPPORT_EMA_DAYS:
@@ -85,50 +80,57 @@ def calculate_technical_indicators(df):
                 ema_values[period] = None
                 continue
                 
-            ema = talib.EMA(close_prices.astype('float64'), timeperiod=period)
-            if not np.isnan(ema[-1]):
-                ema_values[period] = ema[-1]
-            else:
-                ema_values[period] = None
+            ema = EMAIndicator(close=close_prices, window=period)
+            ema_value = ema.ema_indicator().iloc[-1]
+            ema_values[period] = ema_value if not pd.isna(ema_value) else None
         
         # Calculate RSI
-        rsi = np.nan
-        if len(close_prices) >= 14:
-            rsi_values = talib.RSI(close_prices.astype('float64'), timeperiod=14)
-            rsi = rsi_values[-1] if not np.isnan(rsi_values[-1]) else np.nan
+        rsi_indicator = RSIIndicator(close=close_prices, window=14)
+        rsi = rsi_indicator.rsi().iloc[-1]
+        rsi = rsi if not pd.isna(rsi) else np.nan
         
         # Calculate MACD
-        macd, signal = np.nan, np.nan
         macd_bullish = False
+        macd_value = np.nan
+        signal_value = np.nan
+        
         if len(close_prices) >= 26:
-            macd_line, signal_line, _ = talib.MACD(
-                close_prices.astype('float64'),
-                fastperiod=12,
-                slowperiod=26,
-                signalperiod=9
+            macd_indicator = MACD(
+                close=close_prices,
+                window_slow=26,
+                window_fast=12,
+                window_sign=9
             )
-            macd = macd_line[-1] if not np.isnan(macd_line[-1]) else np.nan
-            signal = signal_line[-1] if not np.isnan(signal_line[-1]) else np.nan
+            
+            macd_line = macd_indicator.macd()
+            signal_line = macd_indicator.macd_signal()
+            
+            macd_value = macd_line.iloc[-1] if not pd.isna(macd_line.iloc[-1]) else np.nan
+            signal_value = signal_line.iloc[-1] if not pd.isna(signal_line.iloc[-1]) else np.nan
             
             # Check for MACD bullish crossover
-            if len(macd_line) >= 3 and not np.isnan(macd) and not np.isnan(signal):
-                # Current crossover: MACD crosses above signal line
-                current_crossover = (macd > signal) and (macd_line[-2] <= signal_line[-2])
+            if len(close_prices) >= 3:
+                current_macd = macd_value
+                current_signal = signal_value
+                prev_macd = macd_line.iloc[-2] if len(macd_line) >= 2 else np.nan
+                prev_signal = signal_line.iloc[-2] if len(signal_line) >= 2 else np.nan
                 
-                # Recent crossover: MACD above signal and both rising
-                recent_crossover = (macd > signal) and \
-                                  (macd_line[-2] > signal_line[-2]) and \
-                                  (macd > macd_line[-2]) and \
-                                  (signal > signal_line[-2])
-                
-                macd_bullish = current_crossover or recent_crossover
+                if not np.isnan(current_macd) and not np.isnan(current_signal) and \
+                   not np.isnan(prev_macd) and not np.isnan(prev_signal):
+                    current_crossover = (current_macd > current_signal) and (prev_macd <= prev_signal)
+                    recent_crossover = (current_macd > current_signal) and \
+                                      (prev_macd > prev_signal) and \
+                                      (current_macd > prev_macd) and \
+                                      (current_signal > prev_signal)
+                    
+                    macd_bullish = current_crossover or recent_crossover
         
         return {
-            'current_close': close_prices[-1],
+            'current_close': close_prices.iloc[-1],
             'emas': ema_values,
             'rsi': rsi,
-            'macd': macd,
-            'signal': signal,
+            'macd': macd_value,
+            'signal': signal_value,
             'macd_bullish': macd_bullish
         }
     except Exception as e:
@@ -382,19 +384,19 @@ def generate_stock_report(stock_data):
     return html
 
 def send_email(subject, html_body):
-    """Send email with analysis report"""
+    """Send email with analysis report to multiple recipients"""
     try:
         msg = MIMEMultipart()
         msg['From'] = EMAIL_SENDER
-        msg['To'] = EMAIL_RECEIVER
+        msg['To'] = ", ".join(EMAIL_RECEIVERS)
         msg['Subject'] = subject
         
         msg.attach(MIMEText(html_body, 'html'))
         
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
             server.login(EMAIL_SENDER, EMAIL_PASSWORD)
-            server.send_message(msg)
-        logging.info("Email sent successfully")
+            server.sendmail(EMAIL_SENDER, EMAIL_RECEIVERS, msg.as_string())
+        logging.info(f"Email sent successfully to {len(EMAIL_RECEIVERS)} recipients")
     except Exception as e:
         logging.error(f"Error sending email: {str(e)}")
 
