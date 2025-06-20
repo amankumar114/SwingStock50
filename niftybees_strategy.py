@@ -2,8 +2,7 @@ import yfinance as yf
 import pandas as pd
 import smtplib
 import os
-import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import logging
@@ -15,7 +14,7 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-# === CONFIG ===
+# === CONFIGURATION ===
 NIFTY50_TICKERS = [
     'RELIANCE.NS', 'TCS.NS', 'HDFCBANK.NS', 'ICICIBANK.NS', 
     'INFY.NS', 'HINDUNILVR.NS', 'KOTAKBANK.NS', 'SBIN.NS', 'ASIANPAINT.NS',
@@ -36,16 +35,16 @@ SUPPORT_THRESHOLD = 3.0  # % distance to consider near support
 MIN_WEEKS_DATA = 100  # Minimum weeks of data required (approx 2 years)
 
 # Email configuration from environment variables
-EMAIL_SENDER = os.getenv('EMAIL_SENDER', 'amankumarism@gmail.com')
-EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD', '')
-EMAIL_RECEIVERS = os.getenv('EMAIL_RECEIVERS', 'amankumarism@gmail.com,muskanrohada432@gmail.com').split(',')
+EMAIL_SENDER = os.getenv('EMAIL_SENDER')
+EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
+EMAIL_RECEIVERS = os.getenv('EMAIL_RECEIVERS', '').split(',')
 
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('nifty_swing_trades.log'),
+        logging.FileHandler('niftybees_trades.log'),
         logging.StreamHandler()
     ]
 )
