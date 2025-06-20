@@ -34,6 +34,7 @@ RSI_NEUTRAL = 50
 SUPPORT_THRESHOLD = 3.0  # % distance to consider near support
 MIN_WEEKS_DATA = 100  # Minimum weeks of data required (approx 2 years)
 
+
 # Email configuration from environment variables
 EMAIL_SENDER = os.getenv('EMAIL_SENDER')
 EMAIL_PASSWORD = os.getenv('EMAIL_PASSWORD')
