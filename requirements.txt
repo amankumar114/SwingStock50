@@ -1,5 +1,5 @@
-yfinance
-pandas
-numpy
-ta
-python-dotenv
+yfinance>=0.2.36
+pandas>=2.0.0
+numpy>=1.24.0
+ta>=0.11.0
+python-dotenv>=1.0.0
