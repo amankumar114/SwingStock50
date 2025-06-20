@@ -1,48 +1,38 @@
-name: Daily Stock Analysis
+name: NIFTYBEES Daily Analysis
 
 on:
   schedule:
-    - cron: '15 4 * * *'  # 9:45 AM IST (4:15 AM UTC)
-  workflow_dispatch:
+    # Runs at 2:30 PM IST daily (09:00 UTC)
+    - cron: '0 9 * * *'
+  workflow_dispatch:  # Allow manual triggering
 
 jobs:
-  analysis:
+  run-analysis:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential wget
-
-    - name: Install TA-Lib from Ubuntu repository (stable)
-      run: |
-        sudo apt-get install -y libta-lib-dev
-        sudo ldconfig
-
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
       with:
-        python-version: '3.10'
-
-    - name: Install Python dependencies
+        python-version: '3.9'
+    
+    - name: Install dependencies
       run: |
-        pip install --no-cache-dir --upgrade pip
-        pip install --no-cache-dir numpy
-        pip install --no-cache-dir TA-Lib==0.4.24  # Specific version that works with system lib
-        pip install --no-cache-dir -r requirements.txt
-
-    - name: Verify TA-Lib installation
-      run: |
-        python -c "import talib; print(f'TA-Lib version: {talib.__version__}')"
-
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
     - name: Run analysis
       env:
         EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        EMAIL_RECEIVER: ${{ secrets.EMAIL_RECEIVER }}
+        EMAIL_RECEIVERS: ${{ secrets.EMAIL_RECEIVERS }}
       run: python niftybees_strategy.py
+    
+    - name: Archive results
+      uses: actions/upload-artifact@v2
+      if: always()
+      with:
+        name: analysis-log
+        path: niftybees_trades.log
