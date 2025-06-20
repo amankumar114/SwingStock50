@@ -11,12 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     
     - name: Set up Python
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
+        python-version: '3.10'
     
     - name: Install dependencies
       run: |
@@ -30,8 +30,8 @@ jobs:
         EMAIL_RECEIVERS: ${{ secrets.EMAIL_RECEIVERS }}
       run: python niftybees_strategy.py
     
-    - name: Archive results
-      uses: actions/upload-artifact@v2
+    - name: Upload log file
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: analysis-log
